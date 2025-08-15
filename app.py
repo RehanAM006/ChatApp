@@ -17,11 +17,11 @@ socketio = SocketIO(app)
 
 # ---- IP -> Username binding (EDIT THESE) ----
 AUTHORIZED_USERS = {
-    "192.168.1.10": "Rehan",     # Windows
-    "100.113.94.12": "Rehan",
-    "192.168.1.22": "MintVM",    # Mint VM
-    "100.113.94.12":  "Rehan",    # Other device
-    "192.168.1.4": "Rehan"
+    "x.x.xx.0": "Rehan",     # Windows
+    "x.x.xx..x.12": "Rehan",
+    "1x.x.x..x22": "MintVM",    # Mint VM
+    "1x.x..xx.12":  "Rehan",    # Other device
+    "x.x.x.x..x.4": "Rehan"
     # Add more IPs if needed...
 }
 
