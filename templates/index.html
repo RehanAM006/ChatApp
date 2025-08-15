@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Family Chat</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="chat-container">
+    <header>
+      <h2>Family Chat</h2>
+      <span id="username">{{ username }}</span>
+    </header>
+
+    <div id="messages" class="messages"></div>
+
+    <form id="chat-form" autocomplete="off">
+      <button type="button" id="emoji-btn" title="Insert emoji">😊</button>
+      <input id="message-input" type="text" placeholder="Type a message..." />
+      <button type="submit" id="send-btn">Send</button>
+      <!-- Emoji picker host -->
+      <div id="emoji-picker" style="display:none;"></div>
+    </form>
+  </div>
+
+  <!-- Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <!-- Emoji Picker (Web Component) -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+
+  <script>
+    // Backend-provided username based on IP
+    const username = "{{ username }}";
+
+    // Elements
+    const messagesDiv = document.getElementById("messages");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("message-input");
+    const emojiBtn = document.getElementById("emoji-btn");
+    const emojiPickerHost = document.getElementById("emoji-picker");
+
+    // Socket
+    const socket = io();
+
+    // Create emoji picker component
+    const picker = document.createElement("emoji-picker");
+    emojiPickerHost.appendChild(picker);
+
+    // Toggle picker visibility
+    emojiBtn.addEventListener("click", () => {
+      emojiPickerHost.style.display = (emojiPickerHost.style.display === "none") ? "block" : "none";
+      if (emojiPickerHost.style.display === "block") {
+        input.focus(); // keep focus on input for quick typing
+      }
+    });
+
+    // Insert emoji into input
+    picker.addEventListener("emoji-click", (event) => {
+      const emoji = event.detail.unicode;
+      input.value += emoji;
+      emojiPickerHost.style.display = "none";
+      input.focus();
+    });
+
+    // Helpers
+    function scrollToBottom() {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, s => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[s]));
+    }
+
+    function addMessage(from, text, time) {
+      const wrap = document.createElement("div");
+      wrap.classList.add("msg", from === username ? "mine" : "theirs");
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `${from} • ${time}`;
+
+      const body = document.createElement("div");
+      body.className = "text";
+      // Basic escape to avoid XSS; emojis are fine (unicode chars)
+      body.innerHTML = escapeHTML(text).replace(/\n/g, "<br/>");
+
+      wrap.appendChild(meta);
+      wrap.appendChild(body);
+      messagesDiv.appendChild(wrap);
+      scrollToBottom();
+    }
+
+    function addSystemMessage(msg, time) {
+      const line = document.createElement("div");
+      line.className = "system";
+      line.textContent = `[${time}] ${msg}`;
+      messagesDiv.appendChild(line);
+      scrollToBottom();
+    }
+
+    // Socket event handlers
+    socket.on("message", (data) => addMessage(data.from, data.text, data.time));
+    socket.on("system", (data) => addSystemMessage(data.msg, data.time));
+
+    // Send message
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      socket.emit("send_message", { text });
+      input.value = "";
+    });
+
+    // Enter to send
+    input.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") form.requestSubmit();
+    });
+
+    // Hide picker if clicking outside
+    document.addEventListener("click", (e) => {
+      if (!emojiPickerHost.contains(e.target) && e.target !== emojiBtn) {
+        emojiPickerHost.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
+
